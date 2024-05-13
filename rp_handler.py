@@ -403,9 +403,8 @@ def handler(event):
     payload = validated_input['validated_input']
     process_image_fields(payload)
     result_image = face_swap_api(job_id, payload)
-    response = {'image': result_image}
     
-    return response
+    return result_image
 
 
 if __name__ == '__main__':
