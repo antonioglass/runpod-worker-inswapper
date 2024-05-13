@@ -8,6 +8,9 @@ import insightface
 import numpy as np
 import traceback
 import runpod
+import time
+import random
+import requests
 from runpod.serverless.utils.rp_validator import validate
 from runpod.serverless.modules.rp_logger import RunPodLogger
 from typing import List, Union
@@ -23,6 +26,21 @@ logger = RunPodLogger()
 # ---------------------------------------------------------------------------- #
 # Application Functions                                                        #
 # ---------------------------------------------------------------------------- #
+def is_url(s):
+    return s.startswith('http://') or s.startswith('https://')
+
+def convert_image_to_base64(url):
+    response = requests.get(url)
+    response.raise_for_status()  # Ensure that the request was successful
+    return base64.b64encode(response.content).decode('utf-8')
+
+def process_image_fields(payload):
+    if is_url(payload['source_image']):
+        payload['source_image'] = convert_image_to_base64(payload['source_image'])
+
+    if is_url(payload['target_image']):
+        payload['target_image'] = convert_image_to_base64(payload['target_image'])
+
 def get_face_swap_model(model_path: str):
     model = insightface.model_zoo.get_model(model_path)
     return model
@@ -382,7 +400,12 @@ def handler(event):
             'error': validated_input['errors']
         }
 
-    return face_swap_api(job_id, validated_input['validated_input'])
+    payload = validated_input['validated_input']
+    process_image_fields(payload)
+    result_image = face_swap_api(job_id, payload)
+    response = {'image': result_image}
+    
+    return response
 
 
 if __name__ == '__main__':
